@@ -3,7 +3,7 @@
 # Towards Generalizing Subspace Training: Initial explorations based on Lockdown
 This project is done during the Trustworthy Artificial Intelligence course, which has been an excellent experience. 
 
-We extend our gratitude to the authors for their interesting ideas and outstanding code, and their paper is [Lockdown: Backdoor Defense for Federated Learning with Isolated Subspace Training](https://neurips.cc/virtual/2023/poster/71476), accepted by the NeurIPS 2023.
+We extend our gratitude to the authors for their interesting idea and outstanding code, and their paper is [Lockdown: Backdoor Defense for Federated Learning with Isolated Subspace Training](https://neurips.cc/virtual/2023/poster/71476), accepted by the NeurIPS 2023.
 
 ## Algorithm overview
 The overall procedure can be summarized into four main steps. i) Isolated subspace training. ii)Subspace searching. iii) Aggregation. iv) Model cleaning with consensus fusion.
