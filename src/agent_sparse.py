@@ -123,6 +123,29 @@ class Agent():
         for _ in range(self.args.local_ep):
             for _, (inputs, labels) in enumerate(self.train_loader):
                 optimizer.zero_grad()
+
+
+######The following L1 regularization may be useful at the beginning of training
+                
+                # inputs, labels = inputs.to(device=self.args.device), \
+                #                  labels.to(device=self.args.device)
+                # outputs = global_model(inputs)
+                # minibatch_loss = criterion(outputs, labels)
+                # # Calculate L1 regularization (LASSO)
+                # l1_loss = 0
+                # for param in global_model.parameters():
+                #     l1_loss += torch.sum(torch.abs(param))
+
+                # # Combine minibatch loss with LASSO regularization
+                # loss = minibatch_loss + 0.00015 * l1_loss
+                # # loss = minibatch_loss
+                # loss.backward()
+                # for name, param in global_model.named_parameters():
+                #     param.grad.data = self.mask[name].to(self.args.device) * param.grad.data
+                # optimizer.step()
+
+
+                
                 inputs, labels = inputs.to(device=self.args.device), \
                                  labels.to(device=self.args.device)
                 outputs = global_model(inputs)
