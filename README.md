@@ -1,8 +1,7 @@
 
 
 # Towards Generalizing Subspace Training: Initial explorations based on Lockdown
-This is the repo for the code and datasets used in the paper [Lockdown: Backdoor Defense for Federated Learning with Isolated Subspace Training](https://neurips.cc/virtual/2023/poster/71476), accepted by the NeurIPS 2023.
-The camera ready paper is available [here](https://github.com/git-disl/Lockdown/blob/main/materials/Lockdown__camera_ready_.pdf).
+This project is done during the Trustworthy Artificial Intelligence course, which has been an excellent experience. We extend our gratitude to the authors for their interesting ideas and outstanding code, and their paper is [Lockdown: Backdoor Defense for Federated Learning with Isolated Subspace Training](https://neurips.cc/virtual/2023/poster/71476), accepted by the NeurIPS 2023.
 
 ## Algorithm overview
 The overall procedure can be summarized into four main steps. i) Isolated subspace training. ii)Subspace searching. iii) Aggregation. iv) Model cleaning with consensus fusion.
@@ -49,7 +48,7 @@ Model checkpoints will be saved every 25 rounds in the directory `src/checkpoint
 
 ## Q&A
 
-If you have any questions, you can either open an issue or contact me (thuang374@gatech.edu), and I will reply as soon as I see the issue or email.
+If you have any questions, you can either open an issue.
 
 ## Acknowledgment
 The codebase is modified and adapted from one of our baselines [RLR](https://github.com/TinfoilHat0/Defending-Against-Backdoors-with-Robust-Learning-Rate).
