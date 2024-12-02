@@ -13,8 +13,17 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 from torch.nn.utils import parameters_to_vector
 import logging
-
-
+from sklearn.cluster import KMeans
+import torch
+import copy
+from sklearn.metrics import pairwise_distances
+from sklearn.cluster import AgglomerativeClustering
+import numpy as np
+import torch
+import wandb
+from sklearn.cluster import SpectralClustering
+from sklearn_extra.cluster import KMedoids
+from sklearn.metrics.pairwise import cosine_distances
 
 if __name__ == '__main__':
     torch.backends.cudnn.enabled = True
@@ -47,6 +56,9 @@ if __name__ == '__main__':
         fileHandler.setFormatter(logFormatter)
         rootLogger.addHandler(fileHandler)
     logging.info(args)
+
+    # Initialize wandb
+    wandb.init(project="federated_learning", config=args)
 
     cum_poison_acc_mean = 0
 
@@ -128,7 +140,7 @@ if __name__ == '__main__':
     clean_pacc_vec = []
     clean_per_class_vec = []
 
-    for rnd in range(1, args.rounds + 1):
+    for rnd in range(1, args.rounds + 1): 
         logging.info("--------round {} ------------".format(rnd))
         # mask = torch.ones(n_model_params)
         rnd_global_params = parameters_to_vector([ copy.deepcopy(global_model.state_dict()[name]) for name in global_model.state_dict()])
@@ -178,14 +190,109 @@ if __name__ == '__main__':
             logging.info(f'| Poison Loss/Poison accuracy: {poison_loss:.3f} / {poison_acc:.3f} |')
 
             if args.method == "lockdown" :
-                test_model = copy.deepcopy(global_model)
+                test_model = copy.deepcopy(global_model) 
                 for name, param in test_model.named_parameters():
-                    mask = 0
+                    mask = 0 ######Actually it still turns into a tensor later on
+                    # print('done')
                     for id, agent in enumerate(agents):
-                        mask += old_mask[id][name].to(args.device)
+                        mask += old_mask[id][name].to(args.device) 
+                        # print('old_mask',id, agent, old_mask[id][name].shape)
+                        # print('mask',mask.shape) #torch.Size([64])
+                        # break
+
                     param.data = torch.where(mask.to(args.device) >= args.theta, param,
-                                             torch.zeros_like(param))
-                    logging.info(torch.sum(mask.to(args.device) >= args.theta) / torch.numel(mask))
+                                             torch.zeros_like(param))   
+                    logging.info(torch.sum(mask.to(args.device) >= args.theta) / torch.numel(mask)) ###### mostly 1 and generally 0.6-0.8 
+
+
+
+
+
+
+            ######The following code is trying to cluster based on mask, and exp shows they are useless
+            # if args.method == "lockdown":
+            #     test_model = copy.deepcopy(global_model)
+            #     for name, param in test_model.named_parameters():
+            #         masks = []
+            #         backup=0
+            #         for id, agent in enumerate(agents):
+            #             mask = old_mask[id][name].to(args.device)
+            #             masks.append(mask.flatten())
+            #             backup += old_mask[id][name].to(args.device)
+            #         masks_tensor = torch.stack(masks) ###### Shape would be (num_clients, num_elements)
+            #         num_top = 16
+            #         processed_masks = []
+            #         for client_mask in masks_tensor:
+            #             top_values, top_indices = torch.topk(client_mask, num_top)
+            #             new_mask = torch.zeros_like(client_mask)
+            #             new_mask[top_indices] = top_values
+            #             processed_masks.append(new_mask)
+                        
+            #         processed_masks_tensor = torch.stack(processed_masks)
+            #         masks_np = processed_masks_tensor.cpu().numpy()
+
+
+            #         ###### Jaccard 
+            #         # distance_matrix = pairwise_distances(masks_np, metric='jaccard')
+            #         ###### Use spectral clustering, good in theory, in practice you get disconnected graphs and it's too slow
+            #         # num_clusters = 2  
+            #         # spectral_clustering = SpectralClustering(
+            #         #     n_clusters=num_clusters,
+            #         #     affinity='precomputed',
+            #         #     random_state=0
+            #         # )
+            #         # labels = spectral_clustering.fit_predict(distance_matrix)
+
+
+            #         ###### K-Means 
+            #         num_clusters = 2  
+            #         # kmeans = KMeans(n_clusters=num_clusters, random_state=42, init='k-means++')
+            #         # labels = kmeans.fit_predict(masks_np)  
+            #         distance_matrix = cosine_distances(masks_np)
+
+            #         # Initialize KMedoids with the desired number of clusters and precomputed distance matrix
+            #         kmedoids = KMedoids(n_clusters=num_clusters, metric='precomputed', random_state=42, init='k-medoids++')
+
+            #         # Fit KMedoids on the distance matrix and predict the cluster labels
+            #         labels = kmedoids.fit_predict(distance_matrix)
+            #         unique_labels, counts = np.unique(labels, return_counts=True)
+
+            #         if len(unique_labels) == 1:
+            #                 param.data = torch.where(backup.to(args.device) >= args.theta, param,
+            #                                         torch.zeros_like(param)) 
+            #                 logging.info(torch.sum(mask.to(args.device) >= args.theta) / torch.numel(mask)) 
+
+            #         else:    
+
+            #             smallest_cluster_label = unique_labels[np.argmin(counts)]
+            #             other_cluster_label = unique_labels[np.argmax(counts)]  
+            #             positions_in_smallest_cluster = np.where(labels == smallest_cluster_label)[0]
+            #             positions_in_other_cluster = np.where(labels == other_cluster_label)[0]
+            #             print('positions_in_smallest_cluster',positions_in_smallest_cluster)
+            #             # print('positions_in_other_cluster',positions_in_other_cluster)
+            #             # break
+            #             masks_in_smallest_cluster = masks_np[positions_in_smallest_cluster]
+            #             ###### See if at least one client is set to 1 #
+            #             # mask_sums_small = np.any(masks_in_smallest_cluster != 0, axis=0).astype(int)
+            #             masks_in_other_cluster = masks_np[labels == other_cluster_label]
+            #             # mask_sums_other = np.any(masks_in_other_cluster != 0, axis=0).astype(int)
+            #             mask_sums_small = np.sum(masks_in_smallest_cluster != 0, axis=0)
+            #             mask_sums_other = np.sum(masks_in_other_cluster != 0, axis=0)
+            #             positions_to_zero = np.where(mask_sums_small !=0)[0]
+            #             param_data_flat = param.data.view(-1)
+            #             param_data_flat[positions_to_zero] = 0
+            #             param.data = param_data_flat.view(param.data.shape)    
+            #             logging.info(
+            #             f"{torch.sum(param.data == 0).item() / param.data.numel()}"
+            #             )
+
+
+
+
+
+
+
+
                 val_loss, (val_acc, val_per_class_acc), _ = utils.get_loss_n_accuracy(test_model, criterion,
                                                                                       val_loader,
                                                                                       args, rnd, num_target)
@@ -203,12 +310,33 @@ if __name__ == '__main__':
                 cum_poison_acc_mean += poison_acc
                 logging.info(f'| Clean Attack Success Ratio: {poison_loss:.3f} / {poison_acc:.3f} |')
 
+
+                wandb.log({
+                    "round": rnd,
+                    "clean_val_loss": val_loss,
+                    "clean_val_acc": val_acc,
+                    "clean_val_per_class_acc": val_per_class_acc,
+                    "clean_attack_loss": poison_loss,
+                    "clean_attack_success_ratio": poison_acc})
+
                 poison_loss, (poison_acc, _), fail_samples = utils.get_loss_n_accuracy(test_model, criterion,
                                                                                        poisoned_val_only_x_loader, args,
                                                                                        rnd, num_target)
                 clean_pacc_vec.append(poison_acc)
                 logging.info(f'| Clean Poison Loss/Clean Poison accuracy: {poison_loss:.3f} / {poison_acc:.3f} |')
+
+                wandb.log({
+                    "clean_poison_loss": poison_loss,
+                    "clean_poison_accuracy": poison_acc,
+                    })
                 # ask the guys to finetune the classifier
+
+
+
+
+
+
+
                 del test_model
 
         save_frequency = 25
@@ -254,3 +382,6 @@ if __name__ == '__main__':
                 }, PATH)
 
     logging.info('Training has finished!')
+
+    # Finish wandb run
+    wandb.finish()
